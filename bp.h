@@ -1,20 +1,28 @@
+/*
+Daniel Peek qer419
+Michael Canas ohh135
+CS3793 Assignment 05
+11/8/2018
+Using code provided by Dr. O'Hara
+*/
+
 #ifndef BP_H
 #define BP_H
 
 typedef struct backProp {
-  int inputs;
-  int hiddens;
-  int classes;
+    int inputs;
+    int hiddens;
+    int classes;
 
-  double eta;
+    double eta;
 
-  double *biasBottom;
-  double **weightBottom;
-  double *biasTop;
-  double **weightTop;
+    double *biasBottom;
+    double **weightBottom;
+    double *biasTop;
+    double **weightTop;
 
-  double *hidden;
-  double *output;
+    double *hidden;
+    double *output;
 } backProp_t;
 
 // Create the structure

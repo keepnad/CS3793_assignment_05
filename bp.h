@@ -3,7 +3,7 @@ Daniel Peek qer419
 Michael Canas ohh135
 CS3793 Assignment 05
 11/8/2018
-Using code provided by Dr. O'Hara
+Based on code provided by Dr. O'Hara
 */
 
 #ifndef BP_H
@@ -29,13 +29,13 @@ extern backProp_t *createBP(double eta);
 extern void printBP(FILE *out, backProp_t *bp);
 
 // Forward pass -- make a guess
-extern int predictBP(backProp_t *bp, double **input);
+extern int predictBP(backProp_t *bp, double input[28][28]);
 
 // Print the feed forward pass
-extern void prtPrediction(FILE *out, backProp_t *bp, double **input);
+extern void prtPrediction(FILE *out, backProp_t *bp, double input[28][28]);
 
 // Got it wrong, adjust weights
-extern void adjustWeightsBP(backProp_t *bp, double **input, int actual);
+extern void adjustWeightsBP(backProp_t *bp, double input[28][28], int actual);
 
 #endif // BP_H
 

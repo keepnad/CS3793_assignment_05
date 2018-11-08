@@ -3,7 +3,7 @@ Daniel Peek qer419
 Michael Canas ohh135
 CS3793 Assignment 05
 11/8/2018
-Using code provided by Dr. O'Hara
+Based on code provided by Dr. O'Hara
 */
 
 #include <stdio.h>
@@ -55,7 +55,7 @@ backProp_t *createBP(double eta) {
 }
 
 // Feed forward values from inputs to hiddens to outputs
-int predictBP(backProp_t *bp, double **input) {
+int predictBP(backProp_t *bp, double input[28][28]) {
     int i, j, k, m;
     double sum;
 
@@ -65,7 +65,9 @@ int predictBP(backProp_t *bp, double **input) {
             sum = 0.0;
             for (k = 0; k < 28; k++){
                 for (m = 0; m < 28; m++){
-                    sum += bp->weightBottom[i][j][k][m] * input[k][m];
+                    //if ( abs((k + m)-(i + j))<= 2) {
+                        sum += bp->weightBottom[i][j][k][m] * input[k][m];
+                    //}
                 }
             }
             sum += bp->biasBottom[i][j];
@@ -97,7 +99,7 @@ int predictBP(backProp_t *bp, double **input) {
 }
 
 // Feed errors backwards through hiddens to inputs, by adjusting weights
-void adjustWeightsBP(backProp_t *bp, double **input, int actual) {
+void adjustWeightsBP(backProp_t *bp, double input[28][28], int actual) {
     int i, j, k, m, n;
     double sum;
     double delta[10];
@@ -127,7 +129,10 @@ void adjustWeightsBP(backProp_t *bp, double **input, int actual) {
 
             for (m = 0; m < 28; m++){
                 for (n = 0; n < 28; n++){
-                    bp->weightBottom[m][n][j][k] += bp->eta * bp->hidden[j][k] * (1 - bp->hidden[j][k]) * d * input[m][n];
+                    //if ( abs((k + m)-(i + j))<= 2) {
+                        bp->weightBottom[m][n][j][k] +=
+                                bp->eta * bp->hidden[j][k] * (1 - bp->hidden[j][k]) * d * input[m][n];
+                    //}
                 }
             }
 

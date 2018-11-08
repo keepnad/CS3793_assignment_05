@@ -13,12 +13,14 @@ Daniel Peek qer419
 Michael Canas ohh135
 CS3793 Assignment 05
 11/8/2018
-Using code provided by Dr. O'Hara
+Based on code provided by Dr. O'Hara
 */
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
+#include "bp.h"
 
 // Read all the labels
 static int readLabels(char *labelName, int *numLabels, unsigned char **buffer) {
@@ -107,45 +109,71 @@ static int readImages(char *imageName, int *numImages, int *rows, int *columns, 
 }
 
 // Display an image to stdout
-static void prtImage(int indx, unsigned char *labels, int rows, int columns, unsigned char *images) {
+static void prtImage(int indx, unsigned char *labels, int rows, int columns, unsigned char *images, int input[28][28]) {
     int i, j;
     unsigned char *ptr;
 
     // Print header line
-    printf("\nImage # %d is a %d", indx + 1, labels[indx]);
-    /*printf("\n      ");
+    // printf("\nImage # %d is a %d", indx + 1, labels[indx]);
+    //printf("\n      ");
     for (i = 0; i < columns; i++) {
-        printf(" %3d", i + 1);
+        //printf(" %3d", i + 1);
     }
-    printf("\n");
+    //printf("\n");
 
     // Get to the start of the image (stored by rows, one byte per pixel)
     ptr = images + columns * rows * indx;
 
     for (j = 0; j < rows; j++) {
-        printf("  %2d: ", j + 1);
+        //printf("  %2d: ", j + 1);
         for (i = 0; i < columns; i++) {
+            /*
             if (*ptr == 0) {
                 printf(" %3c", ' ');
             } else {
                 printf(" %3d", *ptr);
-            }
+            }*/
+            input[i][j] = *ptr;
             ptr++;
         }
-        printf("\n");
-    }*/
+        //printf("\n");
+    }
+    /*
+    for (int i = 0; i < 28; i++){
+        for (int j = 0; j < 28; j++){
+            if (input[j][i] == 0){
+                printf("%3c", ' ');
+            }
+            else {
+                printf("%3d", input[j][i]);
+            }
+            if (j == 27){
+                printf("\n");
+            }
+        }
+    }
+    */
 }
 
 // Small main function, manages all the real work
 static int doit(char *name) {
     char imageName[100];
     char labelName[100];
+    int input[28][28];
+    double float_input[28][28];
     unsigned char *images;
     unsigned char *labels;
     int numLabels;
     int numImages;
     int rows, columns;
     int i;
+    int guess;
+    int correct = 0;
+    int total = 0;
+
+    srand(time(0));
+
+    backProp_t *backprop = createBP(.0001);
 
     // Read all the labels
     strcpy(labelName, name);
@@ -157,7 +185,33 @@ static int doit(char *name) {
     strcat(imageName, "-images-idx3-ubyte");
     if (!readImages(imageName, &numImages, &rows, &columns, &images)) return 0;
 
-    for (i = 0; i < numImages; i++) prtImage(i, labels, rows, columns, images);
+    for (i = 0; i < 180000; i++){
+        int index = (rand() % 60000);
+        prtImage(index, labels, rows, columns, images, input);
+        for (int x = 0; x < 28; x++){
+            for (int y = 0; y < 28; y++){
+                float_input[x][y] = (double) input[x][y];
+            }
+        }
+        guess = predictBP(backprop, float_input);
+        // printf("It thinks number %d is a %d, it is in fact a %d", i+1, guess, labels[i]);
+        if ((unsigned char)guess == labels[i]){
+            correct++;
+            total++;
+        }
+        else{
+            total++;
+        }
+
+        adjustWeightsBP(backprop, float_input, labels[i]);
+
+        //printf("i = %d\n", i);
+
+        if (i % 500 == 0){
+            printf("Total accuracy at try %d: %lf\n", i, (double) correct / (double) total);
+        }
+
+    }
 
     return 1;
 }

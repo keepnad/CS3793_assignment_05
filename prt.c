@@ -3,7 +3,7 @@ Daniel Peek qer419
 Michael Canas ohh135
 CS3793 Assignment 05
 11/8/2018
-Using code provided by Dr. O'Hara
+Based on code provided by Dr. O'Hara
 */
 
 #include <stdio.h>

@@ -1,7 +1,7 @@
 /*
 Daniel Peek qer419
 Michael Canas ohh135
-CS3793 Assignment 05
+CS3793 Assignment 06
 11/8/2018
 Based on code provided by Dr. O'Hara
 */
@@ -17,6 +17,7 @@ double randWeight() {
     return ((2.0 * rand()) / INT_MAX - 1.0);
 }
 
+// fill in random initial values for all weights and biases
 backProp_t *createBP(double eta) {
     int i, j, k, m;
 
@@ -64,13 +65,17 @@ int predictBP(backProp_t *bp, double input[28][28]) {
     for (i = 0; i < 28; i++) {
         for (j = 0; j < 28; j++) {
             sum = 0.0;
+
+            // this is the partial connectivity, k goes from i - 2 to i + 2
+            // m goes from j - 2 to j + 2, with exceptions made to keep them in the array bounds,
+            // meaning that each of the hidden nodes only connects to the "nearby" input nodes
             for (k = ((i > 2) ? i - 2 : 0); k < ((i < 26) ? i + 2 : 28); k++) {
                 for (m = ((j > 2) ? j - 2 : 0); m < ((j < 26) ? j + 2 : 28); m++) {
                     sum += bp->weightBottom[i][j][k][m] * input[i][j];
                 }
             }
             sum += bp->biasBottom[i][j];
-            bp->hidden[i][j] = 1.0 / (1.0 + exp(-sum));
+            bp->hidden[i][j] = 1.0 / (1.0 + exp(-sum)); // sigmoid
         }
     }
 
@@ -83,7 +88,7 @@ int predictBP(backProp_t *bp, double input[28][28]) {
             }
         }
         sum += bp->biasTop[i];
-        bp->output[i] = 1.0 / (1.0 + exp(-sum));
+        bp->output[i] = 1.0 / (1.0 + exp(-sum)); // sigmoid
     }
 
     // Find highest output activation (class = i)
@@ -93,11 +98,11 @@ int predictBP(backProp_t *bp, double input[28][28]) {
         }
     }
 
-    // Set caller's variable
+    // Return which number the neural network thinks is depicted
     return i;
 }
 
-// Feed errors backwards through hiddens to inputs, by adjusting weights
+// Feed errors backwards through hidden nodes to inputs, by adjusting weights
 void adjustWeightsBP(backProp_t *bp, double input[28][28], int actual) {
     int i, j, k, m, n;
     double sum;
@@ -126,14 +131,16 @@ void adjustWeightsBP(backProp_t *bp, double input[28][28], int actual) {
                 d += bp->weightTop[j][k][m] * delta[m];
             }
 
+            // this is the other part that is partially connected. As in predictBP,
+            //  each hidden node only gets affected by the nearby input nodes
             for (m = ((j > 2) ? j - 2 : 0); m < ((j < 26) ? j + 2 : 28); m++) {
                 for ((n = (k > 2) ? k - 2 : 0); n < ((k < 26) ? k + 2 : 28); n++) {
-                    bp->weightBottom[m][n][j][k] +=
-                            bp->eta * bp->hidden[j][k] * (1 - bp->hidden[j][k]) * d * input[m][n];
+                    bp->weightBottom[j][k][m][n] +=
+                            bp->eta * bp->hidden[m][n] * (1 - bp->hidden[m][n]) * d * input[j][k];
                 }
             }
 
-            bp->biasBottom[j][k] += bp->eta * d * bp->hidden[j][k] * (1 - bp->hidden[j][k]);
+            bp->biasBottom[j][k] += bp->eta * d * bp->hidden[j][k] * (1 - bp->hidden[j][k]); // derivative of sigmoid
         }
     }
 }

@@ -11,7 +11,7 @@
 /*
 Daniel Peek qer419
 Michael Canas ohh135
-CS3793 Assignment 05
+CS3793 Assignment 06
 11/8/2018
 Based on code provided by Dr. O'Hara
 */
@@ -22,10 +22,49 @@ Based on code provided by Dr. O'Hara
 #include <time.h>
 #include "bp.h"
 
+// Global variable to track if the weights are being read in from files
 int readWeightsFromFile;
+
+// Global variable to track if the program is running in training or testing mode
 int training;
 
-// Read all the labels
+// read each weight and bias array from a file
+static void readWeights(backProp_t *bp) {
+    FILE *bottomWeights = fopen("bottom_weights", "rb");
+    FILE *topWeights = fopen("top_weights", "rb");
+    FILE *bottomBiases = fopen("bottom_biases", "rb");
+    FILE *topBiases = fopen("top_biases", "rb");
+
+    fread(bp->weightBottom, sizeof(double), sizeof(bp->weightBottom), bottomWeights);
+    fread(bp->weightTop, sizeof(double), sizeof(bp->weightTop), topWeights);
+    fread(bp->biasBottom, sizeof(double), sizeof(bp->biasBottom), bottomBiases);
+    fread(bp->biasTop, sizeof(double), sizeof(bp->biasTop), topBiases);
+
+    fclose(bottomWeights);
+    fclose(topWeights);
+    fclose(bottomBiases);
+    fclose(topBiases);
+}
+
+// write each weight and bias array to a file
+static void writeWeights(backProp_t *bp) {
+    FILE *bottomWeights = fopen("bottom_weights", "wb");
+    FILE *topWeights = fopen("top_weights", "wb");
+    FILE *bottomBiases = fopen("bottom_biases", "wb");
+    FILE *topBiases = fopen("top_biases", "wb");
+
+    fwrite(bp->weightBottom, sizeof(double), sizeof(bp->weightBottom), bottomWeights);
+    fwrite(bp->weightTop, sizeof(double), sizeof(bp->weightTop), topWeights);
+    fwrite(bp->biasBottom, sizeof(double), sizeof(bp->biasBottom), bottomBiases);
+    fwrite(bp->biasTop, sizeof(double), sizeof(bp->biasTop), topBiases);
+
+    fclose(bottomWeights);
+    fclose(topWeights);
+    fclose(bottomBiases);
+    fclose(topBiases);
+}
+
+// Read all the labels - not modified from provided code
 static int readLabels(char *labelName, int *numLabels, unsigned char **buffer) {
     FILE *labelFile;
     unsigned char buf[8];
@@ -67,7 +106,7 @@ static int readLabels(char *labelName, int *numLabels, unsigned char **buffer) {
     return 1;
 }
 
-// Read all the images
+// Read all the images - not modified from provided code
 static int readImages(char *imageName, int *numImages, int *rows, int *columns, unsigned char **buffer) {
     FILE *imageFile;
     unsigned char buf[16];
@@ -111,94 +150,50 @@ static int readImages(char *imageName, int *numImages, int *rows, int *columns, 
     return 1;
 }
 
-// Display an image to stdout
-static void prtImage(int indx, unsigned char *labels, int rows, int columns, unsigned char *images, int input[28][28]) {
+// Store the image into a 2D double array
+static void storeImage(int index, int rows, int columns, unsigned char *images, double input[28][28]) {
     int i, j;
     unsigned char *ptr;
 
-    // Print header line
-    // printf("\nImage # %d is a %d", indx + 1, labels[indx]);
-    //printf("\n      ");
-    //for (i = 0; i < columns; i++) {
-        //printf(" %3d", i + 1);
-    //}
-    //printf("\n");
-
-    // Get to the start of the image (stored by rows, one byte per pixel)
-    ptr = images + columns * rows * indx;
+    ptr = images + columns * rows * index;
 
     for (i = 0; i < rows; i++) {
-        //printf("  %2d: ", j + 1);
         for (j = 0; j < columns; j++) {
-            /*
-            if (*ptr == 0) {
-                printf(" %3c", ' ');
-            } else {
-                printf(" %3d", *ptr);
-            }*/
-            input[i][j] = *ptr;
+            input[i][j] = (double) *ptr;
             ptr++;
         }
-        //printf("\n");
     }
-    /*
-    for (int i = 0; i < 28; i++){
-        for (int j = 0; j < 28; j++){
-            if (input[i][j] == 0){
-                printf("%3c", ' ');
-            }
-            else {
-                printf("%3d", input[i][j]);
-            }
-            if (j == 27){
-                printf("\n");
-            }
-        }
-    }
-    */
 }
 
 // Small main function, manages all the real work
 static int doit(char *name) {
+
+    // These variables are from the unmodified file
     char imageName[100];
     char labelName[100];
-    int input[28][28];
-    double float_input[28][28];
     unsigned char *images;
     unsigned char *labels;
     int numLabels;
     int numImages;
     int rows, columns;
-    int run;
-    int guess;
-    int correct = 0;
-    int total = 0;
-    FILE *bottomWeights;
-    FILE *topWeights;
-    FILE *bottomBiases;
-    FILE *topBiases;
 
+    // We added these variables
+    double input[28][28];   // 2D array for the 28 x 28 input images
+    int run;                // counter variable for main loop
+    int numRuns;            // total number of runs to execute
+    int guess;              // result of the prediction
+    int correct = 0;        // totals for how many numbers have been guessed overall
+    int total = 0;          // and how many have been guessed correctly
+    int displayFreq;        // display the accuracy when (run % displayFreq) == 0
+
+    //create the backprop object
     backProp_t *backprop = createBP(.001);
 
-    if (readWeightsFromFile){
-        bottomWeights = fopen("bottom_weights", "rb");
-        topWeights = fopen("top_weights", "rb");
-        bottomBiases = fopen("bottom_biases", "rb");
-        topBiases = fopen("top_biases", "rb");
-
-        fread(backprop->weightBottom, sizeof(double), sizeof(backprop->weightBottom), bottomWeights);
-        fread(backprop->weightTop, sizeof(double), sizeof(backprop->weightTop), topWeights);
-        fread(backprop->biasBottom, sizeof(double), sizeof(backprop->biasBottom), bottomBiases);
-        fread(backprop->biasTop, sizeof(double), sizeof(backprop->biasTop), topBiases);
-
-        fclose(bottomWeights);
-        fclose(topWeights);
-        fclose(bottomBiases);
-        fclose(topBiases);
+    // read weights in from file, if desired
+    //required for testing mode
+    if (readWeightsFromFile) {
+        readWeights(backprop);
     }
-
-    srand(time(0));
-
 
     // Read all the labels
     strcpy(labelName, name);
@@ -210,87 +205,107 @@ static int doit(char *name) {
     strcat(imageName, "-images-idx3-ubyte");
     if (!readImages(imageName, &numImages, &rows, &columns, &images)) return 0;
 
-    for (run = 0; run < 480000; run++) {
-        int index = (rand() % 60000);
-      //  if ((int) labels[index] == 4) {
-        prtImage(index, labels, rows, columns, images, input);
-        for (int x = 0; x < 28; x++) {
-            for (int y = 0; y < 28; y++) {
-                float_input[x][y] = (double) input[x][y];
-            }
+    // if training, do more runs and display accuracy less often
+    if (training) {
+        numRuns = 1000000;
+        displayFreq = 1000;
+    } else {
+        numRuns = numImages;
+        displayFreq = 500;
+    }
+
+    srand(time(0));
+
+    // main loop
+    for (run = 0; run < numRuns; run++) {
+        int index;
+        // if training, go to random indices
+        if (training) {
+            index = (rand() % 60000);
+        } else {
+            index = run;
         }
-        guess = predictBP(backprop, float_input);
+        // get the image into the input array, then convert to double
+        storeImage(index, rows, columns, images, input);
+
+        // predict what number the image is
+        guess = predictBP(backprop, input);
         if (guess == (int) labels[index]) {
             correct++;
             total++;
         } else {
             total++;
         }
+
+        // if in training, adjust the weights to improve the network
         if (training) {
-            adjustWeightsBP(backprop, float_input, (int) labels[index]);
+            adjustWeightsBP(backprop, input, (int) labels[index]);
         }
 
-        //printf("i = %d\n", i);
-
-        if (run % 1000 == 0) {
-            printf("Total accuracy at try %d: %lf\n", run, (double) correct / (double) total);
+        // print accuracy
+        if (run % displayFreq == 0 || run == numRuns - 1) {
+            printf("Total accuracy at try %d: %.03lf%%\n", run, ((double) correct / (double) total) * 100.0);
         }
-     //   }
-     //   else{
-     //       run -= 1;
-     //   }
     }
 
-    printf("\nWrite weights to file? (Y/N): ");
-    char saveToFile = (char) getchar();
+    // if the net is training, the weights can be saved for later use
+    if (training) {
+        printf("\nWrite weights to file? (Y/N): ");
+        char saveToFile = (char) getchar();
 
-    if (saveToFile == 'Y' || saveToFile == 'y'){
-        bottomWeights = fopen("bottom_weights", "wb");
-        topWeights = fopen("top_weights", "wb");
-        bottomBiases = fopen("bottom_biases", "wb");
-        topBiases = fopen("top_biases", "wb");
-
-        fwrite(backprop->weightBottom, sizeof(double), sizeof(backprop->weightBottom), bottomWeights);
-        fwrite(backprop->weightTop, sizeof(double), sizeof(backprop->weightTop), topWeights);
-        fwrite(backprop->biasBottom, sizeof(double), sizeof(backprop->biasBottom), bottomBiases);
-        fwrite(backprop->biasTop, sizeof(double), sizeof(backprop->biasTop), topBiases);
-
-        fclose(bottomWeights);
-        fclose(topWeights);
-        fclose(bottomBiases);
-        fclose(topBiases);
-
+        if (saveToFile == 'Y' || saveToFile == 'y') {
+            writeWeights(backprop);
+        }
     }
-
     return 1;
 }
 
-// Main program, just pick up train or test
+// Main program, pick train or test, and whether or not to read weights from file
 int main(int argc, char *argv[]) {
     char *name;
-
+    // check for correct number of args
     if (argc != 3) {
-        printf("Usage: reader train|t10k 1|0\n");
+        printf("Usage: CS3793_assignment_06 <train|t10k> <0|1>\n");
+        printf("\ttrain: training mode, for training the neural network\n");
+        printf("\tt10k:  testing mode, for testing a trained neural network\n");
+        printf("\t0: Start with a new, random network\n\t1: Open saved existing weights\n");
         exit(1);
     }
+    // if first argument is not correct
     if (strcmp(argv[1], "train") == 0 || strcmp(argv[1], "t10k") == 0) {
         name = argv[1];
-        if (strcmp(name, "train") == 0){
+        if (strcmp(name, "train") == 0) {
             training = 1;
-        }
-        else{
+        } else {
             training = 0;
         }
     } else {
-        printf("Usage: reader train|t10k 1|0\n");
+        printf("Usage: CS3793_assignment_06 <train|t10k> <0|1>\n");
+        printf("\ttrain: training mode, for training the neural network\n");
+        printf("\tt10k:  testing mode, for testing a trained neural network\n");
+        printf("\t0: Start with a new, random network\n\t1: Open saved existing weights\n");
         exit(2);
     }
-    readWeightsFromFile = atoi(argv[2]);
-    if (readWeightsFromFile != 1 && readWeightsFromFile != 0){
-        printf("Usage: reader train|t10k 1|0\n");
+    // if second argument is not correct
+    readWeightsFromFile = (int) strtol(argv[2], NULL, 10);
+    if (readWeightsFromFile != 1 && readWeightsFromFile != 0) {
+        printf("Usage: CS3793_assignment_06 <train|t10k> <0|1>\n");
+        printf("\ttrain: training mode, for training the neural network\n");
+        printf("\tt10k:  testing mode, for testing a trained neural network\n");
+        printf("\t0: Start with a new, random network\n\t1: Open saved existing weights\n");
         exit(3);
     }
+    // if attempting to enter testing mode and not supply weights
+    if (readWeightsFromFile == 0 && training == 0) {
+        printf("Usage: CS3793_assignment_06 <train|t10k> <0|1>\n");
+        printf("\t>>>> Testing mode requires use of pre-made weights. <<<<\n");
+        printf("\ttrain: training mode, for training the neural network\n");
+        printf("\tt10k:  testing mode, for testing a trained neural network\n");
+        printf("\t0: Start with a new, random network\n\t1: Open saved existing weights\n");
+        exit(4);
+    }
 
+    // run the thing
     doit(name);
     return 0;
 }

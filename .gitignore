@@ -1,7 +1,12 @@
-cmake-build-debug/*
+CMakeFiles/
+cmake-build-debug/
 .idea/
 cmake_install.cmake
 CMakeCache.txt
-CS3793_assignment_05.cbp
-CS3793_assignment_05
+CS3793_assignment_06.cbp
+CS3793_assignment_06
 Makefile
+t10k-*
+train-*
+top*
+bottom*

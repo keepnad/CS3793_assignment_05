@@ -17,129 +17,121 @@ double randWeight() {
     return ((2.0 * rand()) / INT_MAX - 1.0);
 }
 
-backProp_t *createBP(int nins, int nhiddens, int nouts, double eta) {
-    int i, k;
+backProp_t *createBP(double eta) {
+    int i, j, k, m;
 
     backProp_t *bp = (backProp_t *) calloc(1, sizeof(backProp_t));
-    bp->inputs = nins;
-    bp->hiddens = nhiddens;
-    bp->classes = nouts;
     bp->eta = eta;
 
-    bp->weightBottom = (double **) calloc(bp->inputs, sizeof(double *));
-    for (i = 0; i < bp->inputs; i++) {
-        bp->weightBottom[i] = (double *) calloc(bp->hiddens, sizeof(double));
-        for (k = 0; k < bp->hiddens; k++) {
-            bp->weightBottom[i][k] = randWeight();
+    for (i = 0; i < 28; i++){
+        for (j = 0; j < 28; j++){
+            for (k = 0; k < 28; k++){
+                for (m = 0; m < 28; m++){
+                    bp->weightBottom[i][j][k][m] = randWeight();
+                }
+            }
         }
     }
 
-    bp->weightTop = (double **) calloc(bp->hiddens, sizeof(double *));
-    for (i = 0; i < bp->hiddens; i++) {
-        bp->weightTop[i] = (double *) calloc(bp->classes, sizeof(double));
-        for (k = 0; k < bp->classes; k++) {
-            bp->weightTop[i][k] = randWeight();
+    for (i = 0; i < 28; i++){
+        for (j = 0; j < 28; j++){
+            for (k = 0; k < 10; k++){
+                bp->weightTop[i][j][k] = randWeight();
+            }
         }
     }
 
-    bp->biasBottom = (double *) calloc(bp->hiddens, sizeof(double));
-    for (k = 0; k < bp->hiddens; k++) {
-        bp->biasBottom[k] = randWeight();
+    for (i = 0; i < 28; i++){
+        for (j = 0; j < 28; j++){
+            bp->biasBottom[i][j] = randWeight();
+        }
     }
 
-    bp->biasTop = (double *) calloc(bp->classes, sizeof(double));
-    for (k = 0; k < bp->classes; k++) {
-        bp->biasTop[k] = randWeight();
+    for (i = 0; i < 10; i++){
+        bp->biasTop[i] = randWeight();
     }
-
-    bp->hidden = (double *) calloc(bp->hiddens, sizeof(double));
-    bp->output = (double *) calloc(bp->classes, sizeof(double));
 
     return bp;
 }
 
 // Feed forward values from inputs to hiddens to outputs
-int predictBP(backProp_t *bp, double *sample, double *confidence) {
-    int i, k;
+int predictBP(backProp_t *bp, double **input) {
+    int i, j, k, m;
     double sum;
-    double nextMaxSum;
 
     // Calculate hidden values
-    for (k = 0; k < bp->hiddens; k++) {
-        sum = 0.0;
-        for (i = 0; i < bp->inputs; i++) {
-            sum += bp->weightBottom[i][k] * sample[i];
+    for (i = 0; i < 28; i++){
+        for (j = 0; j < 28; j++){
+            sum = 0.0;
+            for (k = 0; k < 28; k++){
+                for (m = 0; m < 28; m++){
+                    sum += bp->weightBottom[i][j][k][m] * input[k][m];
+                }
+            }
+            sum += bp->biasBottom[i][j];
+            bp->hidden[i][j] = 1.0 / (1.0 + exp(-sum));
         }
-        sum += bp->biasBottom[k];
-        bp->hidden[k] = 1.0 / (1.0 + exp(-sum));    // Sigmoid (logistic)
     }
 
     // Calculate output values
-    for (k = 0; k < bp->classes; k++) {
+    for (i = 0; i < 28; i++){
         sum = 0.0;
-        for (i = 0; i < bp->hiddens; i++) {
-            sum += bp->weightTop[i][k] * bp->hidden[i];
+        for (j = 0; j < 28; j++){
+            for (k = 0; k < 10; k++){
+                sum += bp->weightTop[i][j][k] * bp->hidden[i][j];
+            }
         }
-        sum += bp->biasTop[k];
-        bp->output[k] = 1.0 / (1.0 + exp(-sum));    // Sigmoid (logistic)
+        sum += bp->biasTop[i];
+        bp->output[i] = 1.0 / (1.0 + exp(-sum));
     }
 
     // Find highest output activation (class = i)
-    for (k = 0; k < bp->classes; k++) {
+    for (k = 0; k < 10; k++) {
         if (k == 0 || bp->output[k] > bp->output[i]) {
             i = k;
         }
     }
 
-    // Find second largest number
-    nextMaxSum = -1.0;
-    for (k = 0; k < bp->classes; k++) {
-        if (k != i) {
-            if (nextMaxSum < 0.0 || bp->output[k] > nextMaxSum) {
-                nextMaxSum = bp->output[k];
-            }
-        }
-    }
-
     // Set caller's variable
-    *confidence = bp->output[i] - nextMaxSum;
     return i;
 }
 
 // Feed errors backwards through hiddens to inputs, by adjusting weights
-void adjustWeightsBP(backProp_t *bp, double *sample, int actual) {
-    int i, j, k;
+void adjustWeightsBP(backProp_t *bp, double **input, int actual) {
+    int i, j, k, m, n;
     double sum;
-    double delta[bp->classes];
+    double delta[10];
 
     // Propagate the error backwards
-    for (k = 0; k < bp->classes; k++) {
-        sum = (k == actual) ? 1.0 : 0.0;        // 1 if correct, else 0
-        sum -= bp->output[k];                   // Predicted
+    for (k = 0; k < 10; k++){
+        sum = (k == actual) ? 1.0 : 0.0;
+        sum -= bp->output[k];
 
-        delta[k] = sum * bp->output[k] * (1 - bp->output[k]);   // Derivative of logistic (sigmoid)
+        delta[k] = sum * bp->output[k] * (1 - bp->output[k]);
 
-        // Update weights from hiddens to outputs
-        for (i = 0; i < bp->hiddens; i++) {
-            bp->weightTop[i][k] += bp->eta * delta[k] * bp->hidden[i];
+        for (i = 0; i < 28; i++){
+            for (j = 0; j < 28; j++){
+                bp->weightTop[i][j][k] += bp->eta * delta[k] * bp->hidden[i][j];
+            }
         }
 
-        // Update bias from hiddens to outputs
         bp->biasTop[k] += bp->eta * delta[k];
     }
 
-    for (j = 0; j < bp->hiddens; j++) {
-        double d = 0;
-        for (k = 0; k < bp->classes; k++) {
-            d += bp->weightTop[j][k] * delta[k];
-        }
+    for (j = 0; j < 28; j++){
+        for (k = 0; k < 28; k++){
+            double d = 0.0;
+            for (m = 0; m < 10; m++){
+                d += bp->weightTop[j][k][m] * delta[m];
+            }
 
-        // Update weights from inputs to hiddens
-        for (i = 0; i < bp->inputs; i++) {
-            bp->weightBottom[i][j] += bp->eta * bp->hidden[j] * (1 - bp->hidden[j]) * d * sample[i];
-        }
+            for (m = 0; m < 28; m++){
+                for (n = 0; n < 28; n++){
+                    bp->weightBottom[m][n][j][k] += bp->eta * bp->hidden[j][k] * (1 - bp->hidden[j][k]) * d * input[m][n];
+                }
+            }
 
-        // Update bias from inputs to hiddens
-        bp->biasBottom[j] += bp->eta * d * bp->hidden[j] * (1 - bp->hidden[j]);
+            bp->biasBottom[j][k] += bp->eta * d * bp->hidden[j][k] * (1 - bp->hidden[j][k]);
+        }
     }
 }

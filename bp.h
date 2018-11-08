@@ -8,37 +8,34 @@ Using code provided by Dr. O'Hara
 
 #ifndef BP_H
 #define BP_H
+#include <stdio.h>
 
 typedef struct backProp {
-    int inputs;
-    int hiddens;
-    int classes;
-
     double eta;
 
-    double *biasBottom;
-    double **weightBottom;
-    double *biasTop;
-    double **weightTop;
+    double biasBottom[28][28]; // bias for bottom weights
+    double weightBottom[28][28][28][28]; // weights from input to hidden nodes
+    double biasTop[10]; // bias for top weights
+    double weightTop[28][28][10]; // weights from hidden to output nodes
 
-    double *hidden;
-    double *output;
+    double hidden[28][28]; // hidden nodes
+    double output[10]; // output nodes
 } backProp_t;
 
 // Create the structure
-extern backProp_t *createBP(int nins, int nhiddens, int nouts, double eta);
+extern backProp_t *createBP(double eta);
 
-// Print the whoel network
+// Print the whole network
 extern void printBP(FILE *out, backProp_t *bp);
 
 // Forward pass -- make a guess
-extern int predictBP(backProp_t *bp, double *sample, double *confidence);
+extern int predictBP(backProp_t *bp, double **input);
 
 // Print the feed forward pass
-extern void prtPrediction(FILE *out, backProp_t *bp, double *sample);
+extern void prtPrediction(FILE *out, backProp_t *bp, double **input);
 
 // Got it wrong, adjust weights
-extern void adjustWeightsBP(backProp_t *bp, double *sample, int actual);
+extern void adjustWeightsBP(backProp_t *bp, double **input, int actual);
 
 #endif // BP_H
 

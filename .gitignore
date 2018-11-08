@@ -1,2 +1,7 @@
 cmake-build-debug/*
 .idea/
+cmake_install.cmake
+CMakeCache.txt
+CS3793_assignment_05.cbp
+CS3793_assignment_05
+Makefile

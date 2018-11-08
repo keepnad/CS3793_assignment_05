@@ -113,7 +113,7 @@ static void prtImage(int indx, unsigned char *labels, int rows, int columns, uns
 
     // Print header line
     printf("\nImage # %d is a %d", indx + 1, labels[indx]);
-    printf("\n      ");
+    /*printf("\n      ");
     for (i = 0; i < columns; i++) {
         printf(" %3d", i + 1);
     }
@@ -133,7 +133,7 @@ static void prtImage(int indx, unsigned char *labels, int rows, int columns, uns
             ptr++;
         }
         printf("\n");
-    }
+    }*/
 }
 
 // Small main function, manages all the real work
@@ -157,7 +157,7 @@ static int doit(char *name) {
     strcat(imageName, "-images-idx3-ubyte");
     if (!readImages(imageName, &numImages, &rows, &columns, &images)) return 0;
 
-    for (i = 0; i < 5; i++) prtImage(i, labels, rows, columns, images);
+    for (i = 0; i < numImages; i++) prtImage(i, labels, rows, columns, images);
 
     return 1;
 }

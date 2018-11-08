@@ -5,17 +5,18 @@ CS3793 Assignment 05
 11/8/2018
 Using code provided by Dr. O'Hara
 */
+
 #include <stdio.h>
 
 #include "bp.h"
-
+/*
 void printBP(FILE *out, backProp_t *bp) {
     int i, k;
 
-    fprintf(out, "\nInputs=%d Hiddens=%d Outputs=%d\n\n", bp->inputs, bp->hiddens, bp->classes);
+    fprintf(out, "\nInputs=%s Hiddens=%s Outputs=%s\n\n", "28 x 28\0", "28 x 28\0", "10\0");
 
     // Show all the input -> hidden weights
-    for (i = 0; i < bp->inputs; i++) {
+    for (i = 0; i < 28; i++) {
         fprintf(out, "weight input->hidden[%d][0:%d] =", i, bp->hiddens);
         for (k = 0; k < bp->hiddens; k++) {
             fprintf(out, " %6.3f", bp->weightBottom[i][k]);
@@ -78,3 +79,4 @@ void prtPrediction(FILE *out, backProp_t *bp, double *sample) {
     }
     fprintf(out, "\n");
 }
+*/

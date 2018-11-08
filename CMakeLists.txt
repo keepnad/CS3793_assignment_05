@@ -2,7 +2,6 @@
 # Michael Canas ohh135
 # CS3793 Assignment 05
 # 11/8/2018
-# Using code provided by Dr. O'Hara
 # CMake file for project
 
 cmake_minimum_required(VERSION 3.12)

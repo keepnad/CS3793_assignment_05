@@ -23,32 +23,33 @@ backProp_t *createBP(double eta) {
     backProp_t *bp = (backProp_t *) calloc(1, sizeof(backProp_t));
     bp->eta = eta;
 
-    for (i = 0; i < 28; i++){
-        for (j = 0; j < 28; j++){
-            for (k = 0; k < 28; k++){
-                for (m = 0; m < 28; m++){
+    for (i = 0; i < 28; i++) {
+        for (j = 0; j < 28; j++) {
+            for (k = 0; k < 28; k++) {
+                for (m = 0; m < 28; m++) {
                     bp->weightBottom[i][j][k][m] = randWeight();
                 }
             }
         }
     }
 
-    for (i = 0; i < 28; i++){
-        for (j = 0; j < 28; j++){
-            for (k = 0; k < 10; k++){
+    for (i = 0; i < 28; i++) {
+        for (j = 0; j < 28; j++) {
+            for (k = 0; k < 10; k++) {
                 bp->weightTop[i][j][k] = randWeight();
             }
         }
     }
 
-    for (i = 0; i < 28; i++){
-        for (j = 0; j < 28; j++){
+    for (i = 0; i < 28; i++) {
+        for (j = 0; j < 28; j++) {
             bp->biasBottom[i][j] = randWeight();
         }
     }
 
-    for (i = 0; i < 10; i++){
+    for (i = 0; i < 10; i++) {
         bp->biasTop[i] = randWeight();
+        bp->output[i] = 0;
     }
 
     return bp;
@@ -60,14 +61,12 @@ int predictBP(backProp_t *bp, double input[28][28]) {
     double sum;
 
     // Calculate hidden values
-    for (i = 0; i < 28; i++){
-        for (j = 0; j < 28; j++){
+    for (i = 0; i < 28; i++) {
+        for (j = 0; j < 28; j++) {
             sum = 0.0;
-            for (k = 0; k < 28; k++){
-                for (m = 0; m < 28; m++){
-                    //if ( abs((k + m)-(i + j))<= 2) {
-                        sum += bp->weightBottom[i][j][k][m] * input[k][m];
-                    //}
+            for (k = ((i > 2) ? i - 2 : 0); k < ((i < 26) ? i + 2 : 28); k++) {
+                for (m = ((j > 2) ? j - 2 : 0); m < ((j < 26) ? j + 2 : 28); m++) {
+                    sum += bp->weightBottom[i][j][k][m] * input[i][j];
                 }
             }
             sum += bp->biasBottom[i][j];
@@ -76,11 +75,11 @@ int predictBP(backProp_t *bp, double input[28][28]) {
     }
 
     // Calculate output values
-    for (i = 0; i < 28; i++){
+    for (i = 0; i < 10; i++) {
         sum = 0.0;
-        for (j = 0; j < 28; j++){
-            for (k = 0; k < 10; k++){
-                sum += bp->weightTop[i][j][k] * bp->hidden[i][j];
+        for (j = 0; j < 28; j++) {
+            for (k = 0; k < 28; k++) {
+                sum += bp->weightTop[j][k][i] * bp->hidden[j][k];
             }
         }
         sum += bp->biasTop[i];
@@ -105,14 +104,14 @@ void adjustWeightsBP(backProp_t *bp, double input[28][28], int actual) {
     double delta[10];
 
     // Propagate the error backwards
-    for (k = 0; k < 10; k++){
+    for (k = 0; k < 10; k++) {
         sum = (k == actual) ? 1.0 : 0.0;
         sum -= bp->output[k];
 
         delta[k] = sum * bp->output[k] * (1 - bp->output[k]);
 
-        for (i = 0; i < 28; i++){
-            for (j = 0; j < 28; j++){
+        for (i = 0; i < 28; i++) {
+            for (j = 0; j < 28; j++) {
                 bp->weightTop[i][j][k] += bp->eta * delta[k] * bp->hidden[i][j];
             }
         }
@@ -120,19 +119,17 @@ void adjustWeightsBP(backProp_t *bp, double input[28][28], int actual) {
         bp->biasTop[k] += bp->eta * delta[k];
     }
 
-    for (j = 0; j < 28; j++){
-        for (k = 0; k < 28; k++){
+    for (j = 0; j < 28; j++) {
+        for (k = 0; k < 28; k++) {
             double d = 0.0;
-            for (m = 0; m < 10; m++){
+            for (m = 0; m < 10; m++) {
                 d += bp->weightTop[j][k][m] * delta[m];
             }
 
-            for (m = 0; m < 28; m++){
-                for (n = 0; n < 28; n++){
-                    //if ( abs((k + m)-(i + j))<= 2) {
-                        bp->weightBottom[m][n][j][k] +=
-                                bp->eta * bp->hidden[j][k] * (1 - bp->hidden[j][k]) * d * input[m][n];
-                    //}
+            for (m = ((j > 2) ? j - 2 : 0); m < ((j < 26) ? j + 2 : 28); m++) {
+                for ((n = (k > 2) ? k - 2 : 0); n < ((k < 26) ? k + 2 : 28); n++) {
+                    bp->weightBottom[m][n][j][k] +=
+                            bp->eta * bp->hidden[j][k] * (1 - bp->hidden[j][k]) * d * input[m][n];
                 }
             }
 

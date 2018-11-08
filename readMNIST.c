@@ -22,6 +22,9 @@ Based on code provided by Dr. O'Hara
 #include <time.h>
 #include "bp.h"
 
+int readWeightsFromFile;
+int training;
+
 // Read all the labels
 static int readLabels(char *labelName, int *numLabels, unsigned char **buffer) {
     FILE *labelFile;
@@ -116,17 +119,17 @@ static void prtImage(int indx, unsigned char *labels, int rows, int columns, uns
     // Print header line
     // printf("\nImage # %d is a %d", indx + 1, labels[indx]);
     //printf("\n      ");
-    for (i = 0; i < columns; i++) {
+    //for (i = 0; i < columns; i++) {
         //printf(" %3d", i + 1);
-    }
+    //}
     //printf("\n");
 
     // Get to the start of the image (stored by rows, one byte per pixel)
     ptr = images + columns * rows * indx;
 
-    for (j = 0; j < rows; j++) {
+    for (i = 0; i < rows; i++) {
         //printf("  %2d: ", j + 1);
-        for (i = 0; i < columns; i++) {
+        for (j = 0; j < columns; j++) {
             /*
             if (*ptr == 0) {
                 printf(" %3c", ' ');
@@ -141,11 +144,11 @@ static void prtImage(int indx, unsigned char *labels, int rows, int columns, uns
     /*
     for (int i = 0; i < 28; i++){
         for (int j = 0; j < 28; j++){
-            if (input[j][i] == 0){
+            if (input[i][j] == 0){
                 printf("%3c", ' ');
             }
             else {
-                printf("%3d", input[j][i]);
+                printf("%3d", input[i][j]);
             }
             if (j == 27){
                 printf("\n");
@@ -166,14 +169,36 @@ static int doit(char *name) {
     int numLabels;
     int numImages;
     int rows, columns;
-    int i;
+    int run;
     int guess;
     int correct = 0;
     int total = 0;
+    FILE *bottomWeights;
+    FILE *topWeights;
+    FILE *bottomBiases;
+    FILE *topBiases;
+
+    backProp_t *backprop = createBP(.001);
+
+    if (readWeightsFromFile){
+        bottomWeights = fopen("bottom_weights", "rb");
+        topWeights = fopen("top_weights", "rb");
+        bottomBiases = fopen("bottom_biases", "rb");
+        topBiases = fopen("top_biases", "rb");
+
+        fread(backprop->weightBottom, sizeof(double), sizeof(backprop->weightBottom), bottomWeights);
+        fread(backprop->weightTop, sizeof(double), sizeof(backprop->weightTop), topWeights);
+        fread(backprop->biasBottom, sizeof(double), sizeof(backprop->biasBottom), bottomBiases);
+        fread(backprop->biasTop, sizeof(double), sizeof(backprop->biasTop), topBiases);
+
+        fclose(bottomWeights);
+        fclose(topWeights);
+        fclose(bottomBiases);
+        fclose(topBiases);
+    }
 
     srand(time(0));
 
-    backProp_t *backprop = createBP(.0001);
 
     // Read all the labels
     strcpy(labelName, name);
@@ -185,31 +210,55 @@ static int doit(char *name) {
     strcat(imageName, "-images-idx3-ubyte");
     if (!readImages(imageName, &numImages, &rows, &columns, &images)) return 0;
 
-    for (i = 0; i < 180000; i++){
+    for (run = 0; run < 480000; run++) {
         int index = (rand() % 60000);
+      //  if ((int) labels[index] == 4) {
         prtImage(index, labels, rows, columns, images, input);
-        for (int x = 0; x < 28; x++){
-            for (int y = 0; y < 28; y++){
+        for (int x = 0; x < 28; x++) {
+            for (int y = 0; y < 28; y++) {
                 float_input[x][y] = (double) input[x][y];
             }
         }
         guess = predictBP(backprop, float_input);
-        // printf("It thinks number %d is a %d, it is in fact a %d", i+1, guess, labels[i]);
-        if ((unsigned char)guess == labels[i]){
+        if (guess == (int) labels[index]) {
             correct++;
             total++;
-        }
-        else{
+        } else {
             total++;
         }
-
-        adjustWeightsBP(backprop, float_input, labels[i]);
+        if (training) {
+            adjustWeightsBP(backprop, float_input, (int) labels[index]);
+        }
 
         //printf("i = %d\n", i);
 
-        if (i % 500 == 0){
-            printf("Total accuracy at try %d: %lf\n", i, (double) correct / (double) total);
+        if (run % 1000 == 0) {
+            printf("Total accuracy at try %d: %lf\n", run, (double) correct / (double) total);
         }
+     //   }
+     //   else{
+     //       run -= 1;
+     //   }
+    }
+
+    printf("\nWrite weights to file? (Y/N): ");
+    char saveToFile = (char) getchar();
+
+    if (saveToFile == 'Y' || saveToFile == 'y'){
+        bottomWeights = fopen("bottom_weights", "wb");
+        topWeights = fopen("top_weights", "wb");
+        bottomBiases = fopen("bottom_biases", "wb");
+        topBiases = fopen("top_biases", "wb");
+
+        fwrite(backprop->weightBottom, sizeof(double), sizeof(backprop->weightBottom), bottomWeights);
+        fwrite(backprop->weightTop, sizeof(double), sizeof(backprop->weightTop), topWeights);
+        fwrite(backprop->biasBottom, sizeof(double), sizeof(backprop->biasBottom), bottomBiases);
+        fwrite(backprop->biasTop, sizeof(double), sizeof(backprop->biasTop), topBiases);
+
+        fclose(bottomWeights);
+        fclose(topWeights);
+        fclose(bottomBiases);
+        fclose(topBiases);
 
     }
 
@@ -220,15 +269,26 @@ static int doit(char *name) {
 int main(int argc, char *argv[]) {
     char *name;
 
-    if (argc != 2) {
-        printf("Usage: reader train|t10k\n");
+    if (argc != 3) {
+        printf("Usage: reader train|t10k 1|0\n");
         exit(1);
     }
     if (strcmp(argv[1], "train") == 0 || strcmp(argv[1], "t10k") == 0) {
         name = argv[1];
+        if (strcmp(name, "train") == 0){
+            training = 1;
+        }
+        else{
+            training = 0;
+        }
     } else {
-        printf("Usage: reader train|t10k\n");
+        printf("Usage: reader train|t10k 1|0\n");
         exit(2);
+    }
+    readWeightsFromFile = atoi(argv[2]);
+    if (readWeightsFromFile != 1 && readWeightsFromFile != 0){
+        printf("Usage: reader train|t10k 1|0\n");
+        exit(3);
     }
 
     doit(name);

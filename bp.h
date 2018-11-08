@@ -8,6 +8,7 @@ Based on code provided by Dr. O'Hara
 
 #ifndef BP_H
 #define BP_H
+
 #include <stdio.h>
 
 typedef struct backProp {
